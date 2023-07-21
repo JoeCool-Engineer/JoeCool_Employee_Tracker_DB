@@ -1,0 +1,3 @@
+DROP DATABASE IF  EXISTS emp_trk;
+
+CREATE DATABASE emp_trk;
