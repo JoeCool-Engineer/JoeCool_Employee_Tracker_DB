@@ -1,14 +1,29 @@
-// Create connection the sql schema 
-const db = require("../db/connection");
-const inquirer = require('inquirer');
-// const { init } = require('../index');
+const db = require('../db/connection');
 
-// Create function to Add Departments
-function addDepartment () {    
-    // Prompt for handling the addDepartment function
+// Input validation helpers
+function validateInput(input, fieldName) {
+  if (!input || input.trim() === '') {
+    console.log(`\n Error: ${fieldName} cannot be empty. Please try again.\n`);
+    return false;
+  }
+  return true;
+}
+
+function validateNumber(input, fieldName) {
+  const num = parseInt(input);
+  if (isNaN(num) || num <= 0) {
+    console.log(`\n Error: ${fieldName} must be a valid number. Please try again.\n`);
+    return false;
+  }
+  return true;
+}
+
+// Create a Department
+function addDepartment(callback) {
+    const inquirer = require('inquirer');
     const questions = [
         ['input', 'addDept', 'What is the name of the department?']
-        ];  
+    ];
 
     inquirer.prompt(questions.map((question) => ({
         type: question[0],
@@ -16,33 +31,50 @@ function addDepartment () {
         message: question[2],
     })))
     .then((userResponse) => {
-        const sql = `INSERT INTO departments (dept) VALUES (?) `;
-        const newDept = userResponse.addDept
-        console.log(newDept);
-        // Add departments through the db connection
-          db.query(sql, newDept, (err, result) => {
-            if (err) {
-                console.log(err);
-            }
-            console.log('Number of departments inserted: ', result.affectedRows);
-            console.log('New Dapartment Id: ', result.insertId);
-            // init();
-          })
-    });
-  }
+        // Validate input
+        if (!validateInput(userResponse.addDept, 'Department name')) {
+          addDepartment(callback);
+          return;
+        }
 
-// Create function to View All Departments
-function viewDepartments () {
+        const sql = `INSERT INTO departments (dept) VALUES (?) `;
+        const newDept = userResponse.addDept.trim();
+
+        // Add departments through the db connection
+        db.query(sql, newDept, (err, result) => {
+          if (err) {
+            console.log('\n Error adding department:', err.message);
+            callback();
+            return;
+          }
+          console.log('\n Department added successfully! ID:', result.insertId, '\n');
+          callback();
+        });
+    });
+}
+
+// View All Departments
+function viewDepartments(callback) {
     const sql = `SELECT * FROM departments`;
-    console.log('Executed viewDepartments Function')
-//   Views the departments table
+
     db.query(sql, (err, results) => {
         if (err) {
-            console.log(err);
+            console.log('\n Error fetching departments:', err.message);
+            setTimeout(callback, 500);
+            return;
         }
-        console.table(results);
-    })
-  }
 
-// Export functions for use back in the index file
-module.exports = { viewDepartments, addDepartment }
+        if (!results || results.length === 0) {
+          console.log('\n No departments found.\n');
+          setTimeout(callback, 500);
+          return;
+        }
+
+        console.log('\n--- DEPARTMENTS ---');
+        console.table(results);
+        console.log('');
+        setTimeout(callback, 500);
+    });
+}
+
+module.exports = { viewDepartments, addDepartment };
